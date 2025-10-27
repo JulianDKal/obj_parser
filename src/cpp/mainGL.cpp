@@ -138,9 +138,19 @@ int main(int argc, char* argv[]) {
         -0.5f,  0.5f, 0.0f,  0.0f, 1.0f  // Top-left
     };
 
+    float xAxisVertices[] = {
+        -100.0f, 0.1f, 0.0f,
+        100.0f, 0.1f, 0.0f
+    };
+    float zAxisVertices[] = {
+        0.0f, 0.1f, -100.0f,
+        0.0f, 0.1f, 100.0f
+    };
+
     Shader teapotShader("./../src/shaders/teapot_vertex.glsl", "./../src/shaders/teapot_fragment.glsl");
     Shader groundShader("./../src/shaders/gridVertex.glsl", "./../src/shaders/gridFragment.glsl");
     Shader lightShader("./../src/shaders/gridVertex.glsl", "./../src/shaders/lightFragment.glsl");
+    Shader lineShader("./../src/shaders/simple_vertex.glsl", "./../src/shaders/diffuse_fragment.glsl");
     
     //Buffers for the grid
     unsigned int grid_VBO, grid_VAO;
@@ -169,8 +179,30 @@ int main(int argc, char* argv[]) {
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
 
+    unsigned int xAxis_VBO, xAxis_VAO;
+    glGenVertexArrays(1, &xAxis_VAO);
+    glGenBuffers(1, &xAxis_VBO);
+
+    glBindVertexArray(xAxis_VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, xAxis_VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(xAxisVertices), xAxisVertices, GL_DYNAMIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    unsigned int zAxis_VBO, zAxis_VAO;
+    glGenVertexArrays(1, &zAxis_VAO);
+    glGenBuffers(1, &zAxis_VBO);
+
+    glBindVertexArray(zAxis_VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, zAxis_VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(zAxisVertices), zAxisVertices, GL_DYNAMIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
     ObjParser objParser;
-    objParser.Parse("./../src/models/penguin.obj");
+    objParser.Parse("./../src/models/textureTesting.obj");
     teapotShader.setFloat("scale", 1.0f);
 
     getErrorCode();
@@ -358,6 +390,25 @@ int main(int argc, char* argv[]) {
         wireFrameButton.Render(wWidth * 0.01f, wHeight - (wHeight * 0.1f));
         fileDialogueButton.Render(wWidth* 0.15, wHeight - (wHeight * 0.1f));
         errMessage.Render(wWidth * 0.25f, wHeight - (wHeight * 0.95f));
+
+        glm::vec3 xColor = {1.0f, 0.0f, 0.0f};
+        glm::vec3 zColor = {0.0f, 0.0f, 1.0f};
+        glLineWidth(4.0f);
+
+        glBindVertexArray(xAxis_VAO);
+        glUseProgram(lineShader.ID);
+        lineShader.setVec3f("color", xColor);
+        lineShader.setMatrix4("model", object_model);
+        lineShader.setMatrix4("view", object_view);
+        lineShader.setMatrix4("projection", object_projection);
+        glDrawArrays(GL_LINES, 0, 2);
+
+        glBindVertexArray(zAxis_VAO);
+        lineShader.setVec3f("color", zColor);
+
+        glDrawArrays(GL_LINES, 0, 2);
+        glLineWidth(1.0f);
+
         glPolygonMode(GL_FRONT_AND_BACK, mode);
 
 
