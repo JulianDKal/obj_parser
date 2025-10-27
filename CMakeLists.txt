@@ -20,7 +20,7 @@ find_package(Freetype REQUIRED)
 # find_package(SDL2_ttf REQUIRED)
 #find_package(GLM REQUIRED)
 
-include_directories(src/include ${OPENGL_INCLUDE_DIR} usr/include src/include/SDL3_ttf src/include/freetype usr/include/harfbuzz )
+include_directories(src/include)
 
 file(GLOB SOURCES_GL "src/cpp/*.cpp")
 # Executable target

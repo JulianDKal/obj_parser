@@ -27,10 +27,27 @@ void Texture::initialize(const std::string& imagePath, unsigned int texUnit)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-    unsigned char* gridImageData = stbi_load(imagePath.c_str(), &width, &height, &nrChannels, 3);
+    int desiredChannels = 3;
+    GLenum imageFormat, internalGlFormat;
+    std::filesystem::path path(imagePath);
+    if(path.extension() == ".png") {
+        std::cout << path.extension() << std::endl;
+        desiredChannels = 4;
+        imageFormat = GL_RGBA;
+        internalGlFormat = GL_RGBA;
+    }
+    else {
+        desiredChannels = 3;
+        imageFormat = GL_RGB;
+        internalGlFormat = GL_RGB;
+    }
+
+    unsigned char* gridImageData = stbi_load(imagePath.c_str(), &width, &height, &nrChannels, desiredChannels);
+
+    std::cout << "Processed Texture " << path.filename() << " | width: " << width << " height: " << height << " nrChannels: " << nrChannels << std::endl;
 
     if(gridImageData) {
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, gridImageData);
+    glTexImage2D(GL_TEXTURE_2D, 0, internalGlFormat, width, height, 0, imageFormat, GL_UNSIGNED_BYTE, gridImageData);
     glGenerateMipmap(GL_TEXTURE_2D);
 
     getErrorCode();

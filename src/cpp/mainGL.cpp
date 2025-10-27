@@ -140,6 +140,7 @@ int main(int argc, char* argv[]) {
 
     Shader teapotShader("./../src/shaders/teapot_vertex.glsl", "./../src/shaders/teapot_fragment.glsl");
     Shader groundShader("./../src/shaders/gridVertex.glsl", "./../src/shaders/gridFragment.glsl");
+    Shader lightShader("./../src/shaders/gridVertex.glsl", "./../src/shaders/lightFragment.glsl");
     
     //Buffers for the grid
     unsigned int grid_VBO, grid_VAO;
@@ -177,6 +178,9 @@ int main(int argc, char* argv[]) {
     ErrorMessage errMessage;
     Texture gridTexture;
     gridTexture.initialize("./../src/images/grid.jpg", 0);
+
+    Texture lightTexture;
+    lightTexture.initialize("./../src/images/sun.png", 0);
 
     getErrorCode();
 
@@ -337,6 +341,19 @@ int main(int argc, char* argv[]) {
         
         glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
         getErrorCode();
+
+        glm::mat4 object_light(1.0f);
+        object_light = glm::translate(object_light, glm::vec3(5.0, 5.0, 5.0));
+        glm::mat4 view_light(1.0f);
+
+        glBindVertexArray(light_VAO);
+        glUseProgram(lightShader.ID);
+        lightShader.useTexture(lightTexture, "lightTexture");
+        lightShader.setMatrix4("model", object_light);
+        lightShader.setMatrix4("view", object_view);
+        lightShader.setMatrix4("projection", object_projection);
+
+        glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
         wireFrameButton.Render(wWidth * 0.01f, wHeight - (wHeight * 0.1f));
         fileDialogueButton.Render(wWidth* 0.15, wHeight - (wHeight * 0.1f));
