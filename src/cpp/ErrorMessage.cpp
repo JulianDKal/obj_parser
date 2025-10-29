@@ -1,8 +1,9 @@
 #include "ErrorMessage.h"
 
 ErrorMessage::ErrorMessage()
-: messageText(40,  "./../src/fonts/Montserrat-Regular.ttf"), textShader("./../src/shaders/glyph_vertex.glsl", "./../src/shaders/glyph_fragment.glsl")
+: messageText(40,  "./../src/fonts/Montserrat-Regular.ttf")
 {
+    textShader.createProgram("./../src/shaders/glyph_vertex.glsl", "./../src/shaders/glyph_fragment.glsl");
     errorMap = {
         std::pair<unsigned int, std::string>{1, "The selected file path is not valid!"},
         std::pair<unsigned int, std::string>{2, "The selected file is not an .obj file!"},

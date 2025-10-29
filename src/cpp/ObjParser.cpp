@@ -2,24 +2,15 @@
 
 void ObjParser::clearData()
 {
-    positions.clear();
-    indices.clear();
     positionIndices.clear();
-    normalIndices.clear();
-    normals.clear();
+    normalIndices.clear();   
     unIndexedNormals.clear();
     verticesMap.clear();
     vertices.clear();
+    uvIndices.clear();
+    unIndexedUVs.clear();
 
-    objName.clear();
-
-    if (vao) glDeleteVertexArrays(1, &vao);
-    if (vbo) glDeleteBuffers(1, &vbo);
-    if (ebo) glDeleteBuffers(1, &ebo);
-    if(uvVBO) glDeleteBuffers(1, &uvVBO);
-    if (normalsVBO) glDeleteBuffers(1, &normalsVBO);
-
-    vao = vbo = ebo = normalsVBO = 0;
+    obj.clearObjectData();
 }
 
 void ObjParser::parseMtl(std::filesystem::path path)
@@ -48,11 +39,11 @@ void ObjParser::parseMtl(std::filesystem::path path)
         }
         //Ambient Color
         else if(firstToken == "Ka"){
-            lineStream >> mat.colorAmbient.r >> mat.colorAmbient.g >> mat.colorAmbient.b;
+            lineStream >> obj.mat.colorAmbient.r >> obj.mat.colorAmbient.g >> obj.mat.colorAmbient.b;
         }
         //Diffuse color
         else if(firstToken == "Kd"){
-            lineStream >> mat.colorDiffuse.r >> mat.colorDiffuse.g >> mat.colorDiffuse.b;
+            lineStream >> obj.mat.colorDiffuse.r >> obj.mat.colorDiffuse.g >> obj.mat.colorDiffuse.b;
         }
         //Diffuse map
         else if(firstToken == "map_Kd") {
@@ -60,19 +51,21 @@ void ObjParser::parseMtl(std::filesystem::path path)
             std::string textureName;
             std::getline(lineStream, textureName);
 
-
             //TODO: Maybe add support for texture locations that are in another directory 
             std::string textureLocation = path.remove_filename().append(textureName);
             std::cout << textureLocation << std::endl;
+            Texture newTexture;
+            if(newTexture.initialize(textureLocation, 0)){
+                obj.mat.texture = newTexture;
+                obj.mat.useTexture = true;
+            }
 
-            mat.texture.initialize(textureLocation, 0);
-            useTexture = true;
         }
         else if(firstToken == "Ks"){
-            lineStream >> mat.colorSpecular.r >> mat.colorSpecular.g >> mat.colorSpecular.b;
+            lineStream >> obj.mat.colorSpecular.r >> obj.mat.colorSpecular.g >> obj.mat.colorSpecular.b;
         }
         else if(firstToken == "Ns") {
-            lineStream >> mat.specExponent;
+            lineStream >> obj.mat.specExponent;
         }
         else if(firstToken == "Ni") continue; //The optical density of the surface, also known as index of refraction
         else if(firstToken == "d") continue; //Translucency of the object (1 means fully opaque)
@@ -81,29 +74,20 @@ void ObjParser::parseMtl(std::filesystem::path path)
     
 }
 
-void ObjParser::Draw()
+void ObjParser::Draw(const glm::mat4& model, const glm::mat4& view, const glm::mat4& projection)
 {
-    getErrorCode();
-
-    glBindVertexArray(vao);
-    glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0 );
-
-    getErrorCode();
+    obj.DrawObject(model, view, projection);
 }
 
 Texture &ObjParser::getTexture()
 {
-    return mat.texture;
+    return obj.mat.texture;
 }
 
-bool ObjParser::isUsingTexture()
-{
-    return useTexture;
-}
 
 const std::string &ObjParser::getObjName()
 {
-    return objName;
+    return obj.objName;
 }
 
 int ObjParser::Parse(std::filesystem::path path)
@@ -119,7 +103,8 @@ int ObjParser::Parse(std::filesystem::path path)
         return ERR_PARSING_ERROR;
     }
 
-    if(positions.size() != 0) clearData();
+    if(obj.positions.size() != 0) clearData();
+
     float v1, v2, v3, vt1, vt2; //vertex 1 2 3 and uv 1 2 of each line
     unsigned int i1, i2, i3, i4, vn, vt;
     float n1, n2, n3;
@@ -128,7 +113,7 @@ int ObjParser::Parse(std::filesystem::path path)
 
     bool normalsIncluded = false;
     bool uvsIncluded = false;
-    useTexture = false;
+    obj.mat.useTexture = false;
 
     int counter = 0;
 
@@ -139,7 +124,7 @@ int ObjParser::Parse(std::filesystem::path path)
         //read vertex data
         if(lineStream.peek() == 'v') { 
             lineStream.get(); //consume the v
-            //process normals
+            //process obj.normals
             if(lineStream.peek() == 'n') {
                 lineStream.get();
                 normalsIncluded = true;
@@ -153,21 +138,21 @@ int ObjParser::Parse(std::filesystem::path path)
                 lineStream.get();
                 uvsIncluded = true;
                 lineStream >> std::ws >> vt1 >> vt2;
-                unIndexedUVs.push_back(glm::vec3(0.0f));
+                unIndexedUVs.push_back(glm::vec2(0.0f));
                 unIndexedUVs.back().x = vt1;
                 unIndexedUVs.back().y = vt2;
             }
             //process normal vertices
             else {
                 lineStream >> std::ws >> v1 >> v2 >> v3;
-                positions.push_back(glm::vec3(0.0f));
-                positions.at(positions.size() - 1).x = v1;
-                positions.at(positions.size() - 1).y = v2;
-                positions.at(positions.size() - 1).z = v3;
+                obj.positions.push_back(glm::vec3(0.0f));
+                obj.positions.at(obj.positions.size() - 1).x = v1;
+                obj.positions.at(obj.positions.size() - 1).y = v2;
+                obj.positions.at(obj.positions.size() - 1).z = v3;
                 
-                scale = std::max(scale, v1);
-                scale = std::max(scale, v2);
-                scale = std::max(scale, v3);
+                obj.scale = std::max(obj.scale, v1);
+                obj.scale = std::max(obj.scale, v2);
+                obj.scale = std::max(obj.scale, v3);
             }
         }
         //read index data
@@ -223,12 +208,11 @@ int ObjParser::Parse(std::filesystem::path path)
                     }
             }
             else {
-                lineStream >> std::ws >> i1 >> i2 >> i3 >> i4;
-
-                indices.push_back(i1 - 1); //decrement by 1 because openGL indexing starts at 0, but obj indexing at 1
-                indices.push_back(i2 - 1);
-                indices.push_back(i3 - 1);
-                if(i4) indices.push_back(i4 - 1);
+                int index;
+                while (lineStream >> index)
+                {
+                    obj.indices.push_back(index - 1);
+                }
             }
         }
         else if(lineStream.peek() == '#') {
@@ -255,7 +239,7 @@ int ObjParser::Parse(std::filesystem::path path)
             lineStream.get();
             std::string name;
             lineStream >> std::ws >> name;
-            objName = name;
+            obj.objName = name;
         }
 
         //TODO: Add support for smooth shading flag (s = 1 or 0 )
@@ -270,6 +254,7 @@ int ObjParser::Parse(std::filesystem::path path)
     //     return ERR_PARSING_ERROR;
     // }
 
+    //TODO: This is potentially dangerous if there are normals included but not UVS
     if(normalsIncluded) {
         //construct the arrays of indices and vertices
         //using a hashmap to reuse duplicate vertices
@@ -277,95 +262,101 @@ int ObjParser::Parse(std::filesystem::path path)
         {
             Vertex vertex;
             vertex.normal = unIndexedNormals[normalIndices[i]];
-            vertex.position = positions[positionIndices[i]];
+            vertex.position = obj.positions[positionIndices[i]];
             vertex.uv = unIndexedUVs[uvIndices[i]];
 
             auto it = verticesMap.find(vertex);
             if(it != verticesMap.end()) { //Vertex already exists in this exact constellation
-                indices.push_back(it->second);
+                obj.indices.push_back(it->second);
             }
             else {
                 unsigned int newIndex = vertices.size();
                 vertices.push_back(vertex);
                 verticesMap[vertex] = newIndex;
-                indices.push_back(newIndex);
+                obj.indices.push_back(newIndex);
             }
         }
 
-        positions.resize(vertices.size());
-        normals.resize(vertices.size());
-        uvs.resize(vertices.size());
+        obj.positions.resize(vertices.size());
+        obj.normals.resize(vertices.size());
+        obj.uvs.resize(vertices.size());
         
         for(int i = 0; i < vertices.size(); i++){
-            positions[i] = vertices[i].position;
-            normals[i] = vertices[i].normal;
-            uvs[i] = vertices[i].uv;
+            obj.positions[i] = vertices[i].position;
+            obj.normals[i] = vertices[i].normal;
+            obj.uvs[i] = vertices[i].uv;
         }
     }    
 
     else {
-        //calculate the normals based on the vertex data
-        normals = std::vector<glm::vec3>(positions.size(), glm::vec3(0.0f));
-        for (size_t i = 0; i < indices.size(); i += 3) {
-        glm::vec3 v0 = positions[indices[i]];
-        glm::vec3 v1 = positions[indices[i+1]];
-        glm::vec3 v2 = positions[indices[i+2]];
+        std::cout << "Calculating normals based on vertex data" << std::endl;
+        std::cout << "Vertices without normals - Positions size: " << obj.positions.size() << " Indices size: " << obj.indices.size() << std::endl;
+        
+        //calculate the obj.normals based on the vertex data
+        obj.normals = std::vector<glm::vec3>(obj.positions.size(), glm::vec3(0.0f));
+        std::cout << "normals size: " << obj.normals.size() << std::endl;
+        for (size_t i = 0; i < obj.indices.size(); i += 3) {
+        glm::vec3 v0 = obj.positions[obj.indices[i]];
+        glm::vec3 v1 = obj.positions[obj.indices[i+1]];
+        glm::vec3 v2 = obj.positions[obj.indices[i+2]];
     
         glm::vec3 edge1 = v1 - v0;
         glm::vec3 edge2 = v2 - v0;
         glm::vec3 faceNormal = glm::normalize(glm::cross(edge1, edge2));
     
-        normals[indices[i]] += faceNormal;
-        normals[indices[i+1]] += faceNormal;    
-        normals[indices[i+2]] += faceNormal;
+        obj.normals[obj.indices[i]] += faceNormal;
+        obj.normals[obj.indices[i+1]] += faceNormal;    
+        obj.normals[obj.indices[i+2]] += faceNormal;
         }
     }
 
-    std::cout << "normals: " << normals.size() << " positions: " << positions.size() << " UVs: " << uvs.size() << " indices: " << indices.size() << std::endl;   
+    std::cout << "obj.normals: " << obj.normals.size() << " obj.positions: " << obj.positions.size() << " UVs: " << obj.uvs.size() << " obj.indices: " << obj.indices.size() << std::endl;   
     
-    if(objName == ""){
-        objName = path.filename();
+    if(obj.objName == ""){
+        obj.objName = path.filename();
     }
-    std::cout << "Object name: " << objName << std::endl; 
+    std::cout << "Object name: " << obj.objName << std::endl; 
 
     //OpenGL Setup
-    glGenVertexArrays(1, &vao);
-    glGenBuffers(1, &vbo);
-    glGenBuffers(1, &ebo);
-    glGenBuffers(1, &normalsVBO);
-    glGenBuffers(1, &uvVBO);
+    glGenVertexArrays(1, &obj.vao);
+    glGenBuffers(1, &obj.vbo);
+    glGenBuffers(1, &obj.ebo);
+    glGenBuffers(1, &obj.normalsVBO);
+    glGenBuffers(1, &obj.uvVBO);
     getErrorCode();
 
-    glBindVertexArray(vao);
+    glBindVertexArray(obj.vao);
 
-    // === Vertex buffer (positions) ===
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 3 * positions.size(), (float*)positions.data(), GL_STATIC_DRAW);
+    // === Vertex buffer (obj.positions) ===
+    glBindBuffer(GL_ARRAY_BUFFER, obj.vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 3 * obj.positions.size(), (float*)obj.positions.data(), GL_STATIC_DRAW);
 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
     getErrorCode();
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(float) * indices.size(), indices.data(), GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, obj.ebo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(float) * obj.indices.size(), obj.indices.data(), GL_STATIC_DRAW);
 
-    glBindBuffer(GL_ARRAY_BUFFER, normalsVBO);
-    glBufferData(GL_ARRAY_BUFFER, 3 * sizeof(float) * normals.size(), (float*)normals.data(), GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, obj.normalsVBO);
+    glBufferData(GL_ARRAY_BUFFER, 3 * sizeof(float) * obj.normals.size(), (float*)obj.normals.data(), GL_STATIC_DRAW);
 
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(1);
 
     getErrorCode();
 
-    glBindBuffer(GL_ARRAY_BUFFER, uvVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * uvs.size() * 2, (float*)uvs.data(), GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, obj.uvVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * obj.uvs.size() * 2, (float*)obj.uvs.data(), GL_STATIC_DRAW);
 
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(2);
 
     glBindVertexArray(0);
     getErrorCode();
+    
+    std::cout << "useTexture: " << obj.mat.useTexture << std::endl;
     return 0;
 
 }

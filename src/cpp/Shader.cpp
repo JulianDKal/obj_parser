@@ -1,6 +1,11 @@
 #include "Shader.h"
 
-Shader::Shader(std::filesystem::path vShaderPath, std::filesystem::path fShaderPath)
+Shader::Shader()
+{
+
+}
+
+void Shader::createProgram(std::filesystem::path vShaderPath, std::filesystem::path fShaderPath)
 {
     std::fstream vShaderFile, fShaderFile;
     std::stringstream vShaderStream, fShaderStream;

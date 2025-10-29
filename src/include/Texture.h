@@ -14,7 +14,7 @@ private:
     int width, height, nrChannels;
 public: 
     Texture();
-    void initialize(const std::string& imagePath, unsigned int texUnit);
+    int initialize(const std::string& imagePath, unsigned int texUnit);
     unsigned int getTextureUnit() const;
     unsigned int getHandle() const;
 };

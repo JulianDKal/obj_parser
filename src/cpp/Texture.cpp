@@ -6,13 +6,15 @@ Texture::Texture()
     textureUnitIndex = 0;
 }
 
-void Texture::initialize(const std::string& imagePath, unsigned int texUnit)
+int Texture::initialize(const std::string& imagePath, unsigned int texUnit)
 {
     getErrorCode();
     textureUnitIndex = texUnit;
+    // glDeleteTextures(1, &textureHandle);
 
     if(!std::filesystem::exists(imagePath)) {
         std::cerr << "The image path specified could not be found: " << imagePath << std::endl;
+        return 0;
     }
     glGenTextures(1, &textureHandle);
     glActiveTexture(GL_TEXTURE0 + textureUnitIndex);
@@ -31,7 +33,6 @@ void Texture::initialize(const std::string& imagePath, unsigned int texUnit)
     GLenum imageFormat, internalGlFormat;
     std::filesystem::path path(imagePath);
     if(path.extension() == ".png") {
-        std::cout << path.extension() << std::endl;
         desiredChannels = 4;
         imageFormat = GL_RGBA;
         internalGlFormat = GL_RGBA;
@@ -54,9 +55,11 @@ void Texture::initialize(const std::string& imagePath, unsigned int texUnit)
     }
     else {
         std::cerr << "STB_image error: " << stbi_failure_reason() << std::endl;
+        return 0;
     }
 
     stbi_image_free(gridImageData);
+    return 1;
 }
 
 unsigned int Texture::getTextureUnit() const

@@ -32,10 +32,63 @@ struct Material {
     glm::vec3 colorDiffuse;
     glm::vec3 colorSpecular;
     float specExponent;
+    bool useTexture = false;
 
+    Shader shader;
     Texture texture;
 
-    Material() : colorAmbient(0.0f), colorDiffuse(0.0f), colorSpecular(0.0f), specExponent(1.0f) {}
+    Material() : colorAmbient(0.0f), colorDiffuse(0.0f), colorSpecular(0.0f), specExponent(1.0f) {
+        shader.createProgram("./../src/shaders/teapot_vertex.glsl", "./../src/shaders/teapot_fragment.glsl");
+    }
+};
+
+struct Object {
+
+    //Vertex Data
+    std::vector<glm::vec3> positions;
+    std::vector<unsigned int> indices; //Final indices that the Index Buffer Object uses
+    std::vector<glm::vec3> normals;
+    std::vector<glm::vec2> uvs;
+
+    float scale = 1;
+    std::string objName;
+    Material mat;
+
+    //OpenGL Handlers
+    unsigned int vbo = 0, vao = 0, ebo = 0, normalsVBO = 0, uvVBO = 0;
+
+    void DrawObject(const glm::mat4& model, const glm::mat4& view, const glm::mat4& projection) {
+        getErrorCode();
+        glUseProgram(mat.shader.ID);
+        mat.shader.setFloat("scale", 1.0f);
+        mat.shader.setBool("useTexture", mat.useTexture);
+        mat.shader.setMatrix4("model", model);
+        mat.shader.setMatrix4("view", view);
+        mat.shader.setMatrix4("projection", projection);
+        mat.shader.setVec3f("lightColor", glm::vec3(1.0f));
+        mat.shader.setVec3f("lightPos", glm::vec3(5.0f));
+        mat.shader.useTexture(mat.texture, "tex");
+        glBindVertexArray(vao);
+        glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0 );
+
+        getErrorCode();
+    }
+
+    void clearObjectData() {
+        positions.clear();
+        indices.clear();
+        normals.clear();
+        objName.clear();
+
+        if (vao) glDeleteVertexArrays(1, &vao);
+        if (vbo) glDeleteBuffers(1, &vbo);
+        if (ebo) glDeleteBuffers(1, &ebo);
+        if(uvVBO) glDeleteBuffers(1, &uvVBO);
+        if (normalsVBO) glDeleteBuffers(1, &normalsVBO);
+
+        vao = vbo = ebo = normalsVBO = 0;
+    }
+
 };
 
 struct VertexHash {
@@ -56,34 +109,25 @@ struct VertexHash {
 class ObjParser
 {
 private:
-    std::vector<glm::vec3> positions;
-    std::vector<unsigned int> indices; //Final indices that the Index Buffer Object uses
 
     //Indices used for processing and constructing the final VBOs and EBO
     std::vector<unsigned int> normalIndices;
     std::vector<unsigned int> positionIndices;
     std::vector<unsigned int> uvIndices;
-    std::vector<glm::vec3> normals;
     std::vector<glm::vec3> unIndexedNormals; //Stream of normals as read from the file
-    std::vector<glm::vec2> uvs;
-    std::vector<glm::vec3> unIndexedUVs;
+    std::vector<glm::vec2> unIndexedUVs;
 
     std::unordered_map<Vertex, unsigned int, VertexHash> verticesMap;
     std::vector<Vertex> vertices;
 
-    Material mat;
-    bool useTexture = false;
-
-    unsigned int vbo = 0, vao = 0, ebo = 0, normalsVBO = 0, uvVBO = 0;
-    float scale = 1;
-    std::string objName;
+    //TODO: Make this a vector of objects that can be drawn
+    Object obj;
 
     void clearData();
     void parseMtl(std::filesystem::path path);
 public:
-    void Draw();
+    void Draw(const glm::mat4& model, const glm::mat4& view, const glm::mat4& projection);
     Texture& getTexture();
-    bool isUsingTexture();
     const std::string& getObjName();
     int Parse(std::filesystem::path path);
     ObjParser();

@@ -5,11 +5,10 @@ extern float wHeight;
 
 Button::Button(float w, float h, glm::vec3 bgColor, glm::vec3 tColor, const char* buttonText, int fontSize)
 : backgroundColor(bgColor), textColor(tColor), text(buttonText), _fontSize(fontSize), 
-    backgroundShader("./../src/shaders/standard_vertex.glsl", "./../src/shaders/diffuse_fragment.glsl"),
-    textShader("./../src/shaders/glyph_vertex.glsl", "./../src/shaders/glyph_fragment.glsl"),
     textObject(fontSize, "./../src/fonts/Montserrat-Regular.ttf")
-
 {
+    backgroundShader.createProgram("./../src/shaders/standard_vertex.glsl", "./../src/shaders/diffuse_fragment.glsl");
+    textShader.createProgram("./../src/shaders/glyph_vertex.glsl", "./../src/shaders/glyph_fragment.glsl");
     width = w;
     height = h;
 
@@ -83,7 +82,7 @@ void Button::Render(float x, float y)
         { xPos + width, yPos + height,   1.0f} 
     };
 
-    std::cout << "xPos: " << xPos << " | " << "yPos: " << yPos << std::endl;
+    //std::cout << "xPos: " << xPos << " | " << "yPos: " << yPos << std::endl;
 
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferSubData(GL_ARRAY_BUFFER, 0, 6 * 3 * sizeof(float), verticesData);

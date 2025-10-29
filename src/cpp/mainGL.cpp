@@ -147,10 +147,12 @@ int main(int argc, char* argv[]) {
         0.0f, 0.1f, 100.0f
     };
 
-    Shader teapotShader("./../src/shaders/teapot_vertex.glsl", "./../src/shaders/teapot_fragment.glsl");
-    Shader groundShader("./../src/shaders/gridVertex.glsl", "./../src/shaders/gridFragment.glsl");
-    Shader lightShader("./../src/shaders/gridVertex.glsl", "./../src/shaders/lightFragment.glsl");
-    Shader lineShader("./../src/shaders/simple_vertex.glsl", "./../src/shaders/diffuse_fragment.glsl");
+    Shader groundShader;
+    groundShader.createProgram("./../src/shaders/gridVertex.glsl", "./../src/shaders/gridFragment.glsl");
+    Shader lightShader;
+    lightShader.createProgram("./../src/shaders/gridVertex.glsl", "./../src/shaders/lightFragment.glsl");
+    Shader lineShader;
+    lineShader.createProgram("./../src/shaders/simple_vertex.glsl", "./../src/shaders/diffuse_fragment.glsl");
     
     //Buffers for the grid
     unsigned int grid_VBO, grid_VAO;
@@ -202,8 +204,7 @@ int main(int argc, char* argv[]) {
     glEnableVertexAttribArray(0);
 
     ObjParser objParser;
-    objParser.Parse("./../src/models/textureTesting.obj");
-    teapotShader.setFloat("scale", 1.0f);
+    objParser.Parse("./../src/models/textureTesting2.obj");
 
     getErrorCode();
 
@@ -220,10 +221,6 @@ int main(int argc, char* argv[]) {
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    glm::mat4 model = glm::mat4(1.0f);
-    glm::mat4 view = glm::mat4(1.0f);
-    glm::mat4 projection = glm::mat4(1.0f);
 
     glm::mat4 object_model = glm::mat4(1.0f);
     glm::mat4 object_view = glm::mat4(1.0f);
@@ -315,13 +312,6 @@ int main(int argc, char* argv[]) {
 
         }
 
-        model = glm::mat4(1.0f);
-        model = glm::rotate(model, glm::radians(SDL_GetTicks() * 0.05f), glm::vec3(1, 1, 0));
-        view = glm::mat4(1.0f);
-        view = glm::translate(view, glm::vec3(modifierX, modifierY, -3.0f)); 
-        projection = glm::mat4(1.0f);
-        projection = glm::perspective(glm::radians(45.0f), wWidth / wHeight, 0.1f, 250.0f);
-
         glClearColor(1, 1, 1, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -329,15 +319,16 @@ int main(int argc, char* argv[]) {
         object_model = glm::translate(object_model, glm::vec3(0, -1.5, 0));
 
         //camera calculations
-        
+        //calculate camera position on a sphere
         float camX = sin(rotationModifierX) * cos(rotationModifierY) * radius;
         float camY = sin(rotationModifierY) * radius;
         float camZ = cos(rotationModifierX) * cos(rotationModifierY) * radius;
         
+        //vector from camera position to world origin
         glm::vec3 directionVector = glm::normalize( glm::vec3(0 - camX, 0 - camY, 0 - camZ));
         glm::vec3 globalUp = glm::vec3(0, 1.0f, 0);
+        //camera's right and up vector
         glm::vec3 rightVector = glm::normalize(glm::vec3(glm::cross(directionVector, globalUp)));
-
         glm::vec3 upVector = glm::cross(rightVector, glm::vec3(-camX, -camY, -camZ));
 
         object_view = glm::mat4(1.0f);
@@ -347,16 +338,7 @@ int main(int argc, char* argv[]) {
         object_projection = glm::mat4(1.0f);
         object_projection = glm::perspective(glm::radians(45.0f), wWidth / wHeight, 0.1f, 100.0f);
 
-
-        glUseProgram(teapotShader.ID);
-        // teapotShader.setBool("useTexture", true);
-        teapotShader.setMatrix4("model", object_model);
-        teapotShader.setMatrix4("view", object_view);
-        teapotShader.setMatrix4("projection", object_projection);
-        teapotShader.setVec3f("lightColor", light.color);
-        teapotShader.setVec3f("lightPos", light.pos);
-        teapotShader.useTexture(objParser.getTexture(), "tex");
-        objParser.Draw();
+        objParser.Draw(object_model, object_view, object_projection);
         
         getErrorCode();
 

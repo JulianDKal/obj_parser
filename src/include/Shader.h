@@ -15,7 +15,8 @@ private:
     unsigned int vS, fS;
 public:
     unsigned int ID; //For the shader program
-    Shader(std::filesystem::path vShaderPath, std::filesystem::path fShaderPath);
+    Shader();
+    void createProgram(std::filesystem::path vShaderPath, std::filesystem::path fShaderPath);
     ~Shader();
     void useTexture(const Texture& texture, std::string samplerName);
     const void setBool(const std::string &name, bool value);
