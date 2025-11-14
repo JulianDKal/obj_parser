@@ -33,7 +33,7 @@ void main() {
     vec3 specular = pow(max(dot(viewDirection, reflectDir), 0.0), specExponent) * specularColor;
     
     vec3 result = ambient + diffuse + specular;
-    // result *= attenuation;
+    result *= attenuation;
     
     if(useTexture) {
         vec4 texColor = texture(tex, texCoord);

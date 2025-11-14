@@ -139,12 +139,12 @@ int main(int argc, char* argv[]) {
     };
 
     float xAxisVertices[] = {
-        -100.0f, 0.01f, 0.0f,
-        100.0f, 0.01f, 0.0f
+        -150.0f, 0.01f, 0.0f,
+        150.0f, 0.01f, 0.0f
     };
     float zAxisVertices[] = {
-        0.0f, 0.01f, -100.0f,
-        0.0f, 0.01f, 100.0f
+        0.0f, 0.01f, -150.0f,
+        0.0f, 0.01f, 150.0f
     };
 
     Shader groundShader;
@@ -152,7 +152,7 @@ int main(int argc, char* argv[]) {
     Shader lightShader;
     lightShader.createProgram("./../src/shaders/gridVertex.glsl", "./../src/shaders/lightFragment.glsl");
     Shader lineShader;
-    lineShader.createProgram("./../src/shaders/simple_vertex.glsl", "./../src/shaders/diffuse_fragment.glsl");
+    lineShader.createProgram("./../src/shaders/line_vertex.glsl", "./../src/shaders/line_fragment.glsl");
     
     //Buffers for the grid
     unsigned int grid_VBO, grid_VAO;
@@ -236,6 +236,10 @@ int main(int argc, char* argv[]) {
     float radius = 8.0f;
 
     Light light = {glm::vec3(1.0, 1.0, 1.0), glm::vec3(2.0, 2.0, 2.0)};
+    Light light2 = {glm::vec3(1.0, 1.0, 1.0), glm::vec3(-2.0, 2.5, -2.0)};
+    std::vector<Light> lights;
+    lights.push_back(light);
+    lights.push_back(light2);
 
     bool newFileReady = false;
     std::string filePath = "";
@@ -336,7 +340,7 @@ int main(int argc, char* argv[]) {
 
         //perspective projection
         object_projection = glm::mat4(1.0f);
-        object_projection = glm::perspective(glm::radians(45.0f), wWidth / wHeight, 0.1f, 100.0f);
+        object_projection = glm::perspective(glm::radians(45.0f), wWidth / wHeight, 0.1f, 250.0f);
 
         glm::vec3 camPos {camX, camY, camZ};
         objParser.Draw(object_model, object_view, object_projection, camPos, light.pos);
