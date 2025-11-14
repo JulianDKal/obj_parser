@@ -16,6 +16,7 @@ out vec2 texCoord;
 void main() {
     vNormal = aNormal;
     texCoord = textureCoordinate;
+    //FragPos has to be in world space in order for the lighting calculations to be correct
     FragPos = vec3(model * vec4(vertexPos, 1.0));
     vec3 normalizedPos = vec3(vertexPos.x / scale, vertexPos.y / scale, vertexPos.z / scale);
     gl_Position = projection * view * model * vec4(normalizedPos, 1.0);

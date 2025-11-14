@@ -1,5 +1,7 @@
 #include "ObjParser.h"
 
+#define DEBUGGING 1
+
 void ObjParser::clearData()
 {
     positionIndices.clear();
@@ -28,6 +30,8 @@ void ObjParser::parseMtl(std::filesystem::path path)
         return;
     }
 
+    // Material newMat;
+
     while (std::getline(file, currentLine))
     {
         std::stringstream lineStream(currentLine);
@@ -36,6 +40,9 @@ void ObjParser::parseMtl(std::filesystem::path path)
         lineStream >> firstToken;
         if(firstToken == "#" || firstToken == ""){
             continue;
+        }
+        else if(firstToken == "newmtl") {
+            lineStream >> std::ws >> obj.mat.name; 
         }
         //Ambient Color
         else if(firstToken == "Ka"){
@@ -59,11 +66,14 @@ void ObjParser::parseMtl(std::filesystem::path path)
                 obj.mat.texture = newTexture;
                 obj.mat.useTexture = true;
             }
+            
 
         }
+        //Specular color
         else if(firstToken == "Ks"){
             lineStream >> obj.mat.colorSpecular.r >> obj.mat.colorSpecular.g >> obj.mat.colorSpecular.b;
         }
+        //Specular exponent
         else if(firstToken == "Ns") {
             lineStream >> obj.mat.specExponent;
         }
@@ -71,12 +81,22 @@ void ObjParser::parseMtl(std::filesystem::path path)
         else if(firstToken == "d") continue; //Translucency of the object (1 means fully opaque)
         else if(firstToken == "Tr") continue; //Translucency of the object (1 means fully translucent, Tr = 1 - d)
     }
+
+    #if DEBUGGING
+    std::cout << "Material Parameters:" << std::endl;
+    std::cout << "Name: " << obj.mat.name << std::endl;
+    std::cout << "Ambient Color (Ka): " << obj.mat.colorAmbient.r << " " << obj.mat.colorAmbient.g << " " << obj.mat.colorAmbient.b << std::endl;
+    std::cout << "Diffuse Color (Kd): " << obj.mat.colorDiffuse.r << " " << obj.mat.colorDiffuse.g << " " << obj.mat.colorDiffuse.b << std::endl;
+    std::cout << "Specular Color (Ks): " << obj.mat.colorSpecular.r << " " << obj.mat.colorSpecular.g << " " << obj.mat.colorSpecular.b << std::endl;
+    std::cout << "Specular Exponent (Ns): " << obj.mat.specExponent << std::endl;
+    std::cout << "Using Texture: " << (obj.mat.useTexture ? "Yes" : "No") << std::endl;
+    #endif
     
 }
 
-void ObjParser::Draw(const glm::mat4& model, const glm::mat4& view, const glm::mat4& projection)
+void ObjParser::Draw(const glm::mat4& model, const glm::mat4& view, const glm::mat4& projection, const glm::vec3& camPos, const glm::vec3& lightPos)
 {
-    obj.DrawObject(model, view, projection);
+    obj.DrawObject(model, view, projection, camPos, lightPos);
 }
 
 Texture &ObjParser::getTexture()
@@ -105,6 +125,7 @@ int ObjParser::Parse(std::filesystem::path path)
 
     if(obj.positions.size() != 0) clearData();
 
+    //TODO: Take into account that there might be three uv values
     float v1, v2, v3, vt1, vt2; //vertex 1 2 3 and uv 1 2 of each line
     unsigned int i1, i2, i3, i4, vn, vt;
     float n1, n2, n3;
@@ -113,7 +134,7 @@ int ObjParser::Parse(std::filesystem::path path)
 
     bool normalsIncluded = false;
     bool uvsIncluded = false;
-    obj.mat.useTexture = false;
+    obj.mat.setDefault();
 
     int counter = 0;
 
@@ -316,6 +337,8 @@ int ObjParser::Parse(std::filesystem::path path)
         obj.objName = path.filename();
     }
     std::cout << "Object name: " << obj.objName << std::endl; 
+
+    //obj.mat.useTexture = false; //Debugging
 
     //OpenGL Setup
     glGenVertexArrays(1, &obj.vao);

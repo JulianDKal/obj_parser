@@ -139,12 +139,12 @@ int main(int argc, char* argv[]) {
     };
 
     float xAxisVertices[] = {
-        -100.0f, 0.1f, 0.0f,
-        100.0f, 0.1f, 0.0f
+        -100.0f, 0.01f, 0.0f,
+        100.0f, 0.01f, 0.0f
     };
     float zAxisVertices[] = {
-        0.0f, 0.1f, -100.0f,
-        0.0f, 0.1f, 100.0f
+        0.0f, 0.01f, -100.0f,
+        0.0f, 0.01f, 100.0f
     };
 
     Shader groundShader;
@@ -235,7 +235,7 @@ int main(int argc, char* argv[]) {
 
     float radius = 8.0f;
 
-    Light light = {glm::vec3(1.0, 1.0, 1.0), glm::vec3(5.0, 5.0, 5.0)};
+    Light light = {glm::vec3(1.0, 1.0, 1.0), glm::vec3(2.0, 2.0, 2.0)};
 
     bool newFileReady = false;
     std::string filePath = "";
@@ -309,7 +309,7 @@ int main(int argc, char* argv[]) {
                 wHeight = event.window.data2;
                 glViewport(0, 0, wWidth, wHeight);
             }
-
+            
         }
 
         glClearColor(1, 1, 1, 1.0f);
@@ -338,7 +338,8 @@ int main(int argc, char* argv[]) {
         object_projection = glm::mat4(1.0f);
         object_projection = glm::perspective(glm::radians(45.0f), wWidth / wHeight, 0.1f, 100.0f);
 
-        objParser.Draw(object_model, object_view, object_projection);
+        glm::vec3 camPos {camX, camY, camZ};
+        objParser.Draw(object_model, object_view, object_projection, camPos, light.pos);
         
         getErrorCode();
 
@@ -355,23 +356,6 @@ int main(int argc, char* argv[]) {
         
         glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
         getErrorCode();
-
-        glm::mat4 object_light(1.0f);
-        object_light = glm::translate(object_light, glm::vec3(5.0, 5.0, 5.0));
-        glm::mat4 view_light(1.0f);
-
-        glBindVertexArray(light_VAO);
-        glUseProgram(lightShader.ID);
-        lightShader.useTexture(lightTexture, "lightTexture");
-        lightShader.setMatrix4("model", object_light);
-        lightShader.setMatrix4("view", object_view);
-        lightShader.setMatrix4("projection", object_projection);
-
-        glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-
-        wireFrameButton.Render(wWidth * 0.01f, wHeight - (wHeight * 0.1f));
-        fileDialogueButton.Render(wWidth* 0.15, wHeight - (wHeight * 0.1f));
-        errMessage.Render(wWidth * 0.25f, wHeight - (wHeight * 0.95f));
 
         glm::vec3 xColor = {1.0f, 0.0f, 0.0f};
         glm::vec3 zColor = {0.0f, 0.0f, 1.0f};
@@ -390,6 +374,23 @@ int main(int argc, char* argv[]) {
 
         glDrawArrays(GL_LINES, 0, 2);
         glLineWidth(1.0f);
+
+        glm::mat4 object_light(1.0f);
+        object_light = glm::translate(object_light, light.pos);
+        glm::mat4 view_light(1.0f);
+
+        glBindVertexArray(light_VAO);
+        glUseProgram(lightShader.ID);
+        lightShader.useTexture(lightTexture, "lightTexture");
+        lightShader.setMatrix4("model", object_light);
+        lightShader.setMatrix4("view", object_view);
+        lightShader.setMatrix4("projection", object_projection);
+
+        glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+        wireFrameButton.Render(wWidth * 0.01f, wHeight - (wHeight * 0.1f));
+        fileDialogueButton.Render(wWidth* 0.15, wHeight - (wHeight * 0.1f));
+        errMessage.Render(wWidth * 0.25f, wHeight - (wHeight * 0.95f));
 
         glPolygonMode(GL_FRONT_AND_BACK, mode);
 
